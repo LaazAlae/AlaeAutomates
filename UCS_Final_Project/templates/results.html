@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="preload" href="{{ url_for('static', filename='images/autogreen.avif') }}" as="image">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Separated Statements</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        .container {
+            text-align: center;
+            margin: 50px auto;
+        }
+        h1 {
+            font-size: 28px;
+            margin-bottom: 70px;
+        }
+        .buttons-container {
+            margin-top: 30px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        .button {
+            font-size: 16px;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 5px;
+            background-color: rgba(75, 75, 75, 0.742); /* Semi-transparent background */
+            color: #ffffff;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            text-decoration: none;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            text-align: center;
+        }
+        .button:hover {
+            background-color: #266d29;
+        }
+        .button.disabled {
+            background-color: rgba(255, 255, 255, 0.25); /* Semi-transparent background */
+            cursor: not-allowed;
+        }
+        .large-button {
+            grid-column: span 2;
+            height: 100px;
+            margin-top: 20px;
+            font-size: 18px;
+        }
+        .home-button {
+            width: 100px;
+            display: block;
+            margin: 20px auto;
+            font-size: 16px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #2196F3;
+            color: #ffffff;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            text-decoration: none;
+            text-align: center;
+            margin-top: 50px;
+        }
+        .home-button:hover {
+            background-color: #1976D2;
+        }
+    </style>
+    <script>
+        function clearResultsAndGoHome() {
+            fetch('{{ url_for("statement_separator.clear_results") }}', {
+                method: 'POST'
+            }).then(response => {
+                if (response.ok) {
+                    window.location.href = '{{ url_for("home") }}';
+                } else {
+                    console.error('Failed to clear the results folder.');
+                }
+            }).catch(error => {
+                console.error('Error:', error);
+            });
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Here Are Your Separated Statements</h1>
+        
+        <div class="buttons-container">
+            <a href="{{ url_for('statement_separator.download_pdf', pdf_type='natio_single') }}" 
+               class="button {% if count_natio_single == 0 %}disabled{% endif %}" 
+               {% if count_natio_single == 0 %}onclick="return false;"{% endif %}>
+                <div class="title">Single Page National Statements</div>
+                <div class="pages">{{ count_natio_single }} pages</div>
+            </a>
+            <a href="{{ url_for('statement_separator.download_pdf', pdf_type='natio_multi') }}" 
+               class="button {% if count_natio_multi == 0 %}disabled{% endif %}" 
+               {% if count_natio_multi == 0 %}onclick="return false;"{% endif %}>
+                <div class="title">Multi Page National Statements</div>
+                <div class="pages">{{ count_natio_multi }} pages</div>
+            </a>
+            <a href="{{ url_for('statement_separator.download_pdf', pdf_type='foreign') }}" 
+               class="button {% if count_foreign == 0 %}disabled{% endif %}" 
+               {% if count_foreign == 0 %}onclick="return false;"{% endif %}>
+                <div class="title">Foreign Statements</div>
+                <div class="pages">{{ count_foreign }} pages</div>
+            </a>
+            <a href="{{ url_for('statement_separator.download_pdf', pdf_type='dnm') }}" 
+               class="button {% if count_dnm == 0 %}disabled{% endif %}" 
+               {% if count_dnm == 0 %}onclick="return false;"{% endif %}>
+                <div class="title">Do Not Mail Statements</div>
+                <div class="pages">{{ count_dnm }} pages</div>
+            </a>
+            <a href="{{ url_for('statement_separator.download_all') }}" class="button large-button">
+                Download a Folder with All Separated PDFs
+            </a>
+        </div>
+
+        <button class="home-button" onclick="clearResultsAndGoHome()">
+            Home
+        </button>
+    </div>
+</body>
+</html>

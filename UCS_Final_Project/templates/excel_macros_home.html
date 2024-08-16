@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel Macros</title>
+    <style>
+        body {
+            background: #011918 url('/static/images/autosmoother.avif') no-repeat center center fixed;
+            background-size: cover;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .container {
+            text-align: center;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            margin-top: 50px;
+        }
+
+        header {
+            background-color: rgba(51, 50, 50, 0.5);
+            padding: 10px;
+            color: #ffffff;
+            text-align: center;
+            border-radius: 15px;
+            margin-bottom: 50px;
+            margin-top: 100px;
+            margin-left: 50px;
+            margin-right: 50px;
+            width: calc(100% - 100px);
+            margin-bottom: 100px;
+        }
+
+        header nav a {
+            color: #ffffff;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+
+        h1, h2 {
+            text-align: center;
+        }
+
+        .button-container {
+            position: relative;
+            margin-bottom: 50px;
+            display: inline-block;
+        }
+
+        .main-button {
+            margin-top: 30px;
+            width: 300px;
+            padding: 20px 40px;
+            background-color: rgb(255, 255, 255);
+            color: #000000;
+            font-size: 24px;
+            font-weight: 600;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+            position: relative;
+            z-index: 1;
+        }
+
+        .main-button:hover {
+            background-color: #45a049;
+        }
+
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 1; 
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto; 
+            background-color: rgba(0, 0, 0, 0.5); 
+            backdrop-filter: blur(5px);  /* Adds a blur effect to the background */
+            transition: all 0.3s ease-in-out;
+        }
+
+        .modal-content {
+            background-color: #363535;
+            margin: 10% auto;
+            padding: 30px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            animation: slide-down 0.3s ease-out;
+        }
+
+        @keyframes slide-down {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-content h3 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #78cf5d;
+        }
+
+        .modal-content p {
+            font-size: 18px;
+            margin-bottom: 30px;
+            color: #ffffff;
+            text-align: left; /* Aligning text to the left */
+        }
+
+        .modal-content ol {
+            text-align: left; /* Aligning the list to the left */
+            color: #ffffff;
+        }
+
+        .modal-button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .modal-button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Excel Macros</h1>
+        <nav>
+            <a href="/">Home</a>
+        </nav>
+    </header>
+
+    <div class="container">
+        <p>Click macro name to copy code to your clipboard</p>
+        <div class="button-container" id="cleanup-container">
+            <button class="main-button" onclick="copyCleanupCode()">Clean Up & Format</button>
+        </div>
+
+        <div class="button-container" id="sort-container">
+            <button class="main-button" onclick="copySortCode()">Sort and Sum</button>
+        </div>
+    </div>
+
+    <!-- Modal for success message and instructions -->
+    <div id="success-modal" class="modal">
+        <div class="modal-content">
+            <h3>Success!</h3>
+            <p id="modal-text"></p>
+            <button class="modal-button" onclick="closeModal()">Close</button>
+        </div>
+    </div>
+</body>
+</html>
+
+    <script>
+        function showSuccessModal(message) {
+            document.getElementById('modal-text').innerHTML = `
+                <p>${message}</p>
+                <ol>
+                    <li>Open Excel and press <strong>Alt + F11</strong> to open the VBA editor.</li>
+                    <li>Go to <strong>Insert > Module</strong>.</li>
+                    <li>Paste the copied code into the module window.</li>
+                    <li>Save and close the VBA editor.</li>
+                    <li>Run the macro in Excel.</li>
+                </ol>
+            `;
+            document.getElementById('success-modal').style.display = 'block';
+        }
+
+        function copyCleanupCode() {
+            // The actual VBA code to be copied
+            const macroCode = `Sub ProcessDataAndFormat()
+
+        Dim wsOriginal As Worksheet
+        Dim wsNew As Worksheet
+        Dim lastRow As Long
+        Dim i As Long
+        Dim fName As String, lName As String, combinedName As String
+        Dim rng As Range
+
+        Set wsOriginal = ActiveSheet
+        wsOriginal.Copy After:=wsOriginal
+        Set wsNew = wsOriginal.Next
+        wsNew.Name = "AlaeMacro"
+
+        ' Set the worksheet to the active sheet
+        Set ws = ActiveSheet
+
+        ' Find the last row with data in column E
+        lastRow = ws.Cells(ws.Rows.Count, "E").End(xlUp).Row
+
+        ' sort based on card then inv nbr
+        ws.Cells.Select
+        ws.Sort.SortFields.Clear
+        ws.Sort.SortFields.Add2 Key:=Range("F2:F" & lastRow) _
+            , SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortNormal
+        ws.Sort.SortFields.Add2 Key:=Range("B2:B" & lastRow) _
+            , SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortNormal
+        With ws.Sort
+            .SetRange Range("A1:J" & lastRow)
+            .Header = xlYes
+            .MatchCase = False
+            .Orientation = xlTopToBottom
+            .SortMethod = xlPinYin
+            .Apply
+        End With
+
+        ' Loop through each row
+        For i = 1 To lastRow
+            ' Process column E: lastname, firstname -> firstname lastname
+            If InStr(ws.Cells(i, 5).Value, ",") > 0 Then
+                lName = Trim(Left(ws.Cells(i, 5).Value, InStr(ws.Cells(i, 5).Value, ",") - 1))
+                fName = Trim(Mid(ws.Cells(i, 5).Value, InStr(ws.Cells(i, 5).Value, ",") + 1))
+                ws.Cells(i, 5).Value = fName & " " & lName
+            End If
+
+            ' Process column F: replace 'A' with 'AMEX-', 'V' with 'VISA-', 'M' with 'MC-'
+            Select Case ws.Cells(i, 6).Value
+                Case "A"
+                    ws.Cells(i, 6).Value = "AMEX-"
+                Case "V"
+                    ws.Cells(i, 6).Value = "VISA-"
+                Case "M"
+                    ws.Cells(i, 6).Value = "MC-"
+            End Select
+
+            ' Combine columns F and G into column F without removing the last four digits
+            ws.Cells(i, 6).Value = ws.Cells(i, 6).Value & Right(ws.Cells(i, 7).Value, 4)
+        Next i
+
+        ' Clear column G
+        ws.Range("G1:G" & lastRow).ClearContents
+
+        ' Delete columns A, C, D, H, and I
+        ws.Columns("A").Delete
+        ws.Columns("B").Delete
+        ws.Columns("B").Delete
+        ws.Columns("E").Delete
+        ws.Columns("E").Delete
+        ws.Columns("D").Delete
+
+        ' Move column B to the last position
+        ws.Columns("B").Cut
+        ws.Columns("F").Insert Shift:=xlToRight
+
+        ' Set cell style to "output" (assumes the style exists)
+        On Error Resume Next
+        Set rng = ws.Range("A1").Resize(lastRow, 5)
+        rng.Style = "Output"
+        On Error GoTo 0
+
+        ' Adjust column widths to fit content
+        ws.Columns("A:E").ColumnWidth = 100
+        ws.Rows.AutoFit
+        ws.Columns("A:E").AutoFit
+
+        ' Make cells black with white font
+        With rng
+            .Interior.Color = RGB(0, 0, 0)
+            .Font.Color = RGB(255, 255, 255)
+        End With
+
+        ' Adjust row height
+        ws.Rows.RowHeight = 15
+
+        Dim col As Range
+        For Each col In ws.Columns("A:F")
+            col.ColumnWidth = col.ColumnWidth * 1.1
+        Next col
+
+        ' Apply lighter shade of black for rows starting with 'MC' in column B
+        For i = 1 To lastRow
+            If Left(ws.Cells(i, 2).Value, 2) = "MC" Then
+                With ws.Rows(i).Columns("A:E")
+                    .Interior.Color = RGB(35, 35, 35)
+                    .Font.Color = RGB(255, 255, 255)
+                End With
+            End If
+        Next i
+
+        End Sub`;
+
+            // Copy the VBA code to the clipboard
+            navigator.clipboard.writeText(macroCode).then(() => {
+                // Display the modal with a simple message
+                showSuccessModal("This macro makes your credit card batch Excel copy-paste ready.");
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+            });
+        }
+
+        function copySortCode() {
+            const macroCode = `Sub SortAndSum()
+
+        Dim ws As Worksheet
+        Dim lastRow As Long
+        Dim i As Long
+        Dim sumAmexPROJ As Double
+        Dim sumMVDPROJ As Double
+        Dim sumAmexRep As Double
+        Dim sumMVDRep As Double
+        Dim totalSum As Double
+
+        ' Set the worksheet to the active sheet
+        Set ws = ActiveSheet
+
+        ' Find the last row with data in column F
+        lastRow = ws.Cells(ws.Rows.Count, "F").End(xlUp).Row
+
+        ' Initialize sums
+        sumAmexPROJ = 0
+        sumMVDPROJ = 0
+        sumAmexRep = 0
+        sumMVDRep = 0
+        totalSum = 0
+
+        ' Loop through each row to calculate sums
+        For i = 2 To lastRow
+            ' Calculate total sum
+            totalSum = totalSum + ws.Cells(i, "J").Value
+
+            ' Calculate Amex PROJ
+            If ws.Cells(i, "F").Value Like "*A*" Then
+                If ws.Cells(i, "B").Value Like "*P*" Or (ws.Cells(i, "B").Value Like "*P*" And ws.Cells(i, "B").Value Like "*R*") Then
+                    sumAmexPROJ = sumAmexPROJ + ws.Cells(i, "J").Value
+                End If
+            End If
+
+            ' Calculate M/V/D PROJ
+            If ws.Cells(i, "F").Value Like "*M*" Or ws.Cells(i, "F").Value Like "*V*" Or ws.Cells(i, "F").Value Like "*D*" Then
+                If ws.Cells(i, "B").Value Like "*P*" Or (ws.Cells(i, "B").Value Like "*P*" And ws.Cells(i, "B").Value Like "*R*") Then
+                    sumMVDPROJ = sumMVDPROJ + ws.Cells(i, "J").Value
+                End If
+            End If
+
+            ' Calculate Amex Rep
+            If ws.Cells(i, "F").Value Like "*A*" Then
+                If ws.Cells(i, "B").Value Like "*R*" And Not (ws.Cells(i, "B").Value Like "*P*") Then
+                    sumAmexRep = sumAmexRep + ws.Cells(i, "J").Value
+                End If
+            End If
+
+            ' Calculate M/V/D Rep
+            If ws.Cells(i, "F").Value Like "*M*" Or ws.Cells(i, "F").Value Like "*V*" Or ws.Cells(i, "F").Value Like "*D*" Then
+                If ws.Cells(i, "B").Value Like "*R*" And Not (ws.Cells(i, "B").Value Like "*P*") Then
+                    sumMVDRep = sumMVDRep + ws.Cells(i, "J").Value
+                End If
+            End If
+        Next i
+
+        ' Output the results
+        ws.Cells(1, "L").Value = "Amex PROJ"
+        ws.Cells(2, "L").Value = sumAmexPROJ
+        ws.Cells(1, "M").Value = "M/V/D PROJ"
+        ws.Cells(2, "M").Value = sumMVDPROJ
+        ws.Cells(1, "N").Value = "Amex Rep"
+        ws.Cells(2, "N").Value = sumAmexRep
+        ws.Cells(1, "O").Value = "M/V/D Rep"
+        ws.Cells(2, "O").Value = sumMVDRep
+        ws.Cells(1, "P").Value = "Total Sum"
+        ws.Cells(2, "P").Value = totalSum
+
+        ws.Columns("L:P").AutoFit
+        ws.Rows.RowHeight = 15
+
+        Dim col As Range
+        For Each col In ws.Columns("L:P")
+            col.ColumnWidth = col.ColumnWidth * 1.1
+        Next col
+
+        MsgBox "Macro execution completed."
+
+        End Sub`;
+
+            // Copy the VBA code to the clipboard
+            navigator.clipboard.writeText(macroCode).then(() => {
+            showSuccessModal("This code gives output totals for each category.");
+        }).catch(err => {
+            console.error('Failed to copy text: ', err);
+        });
+    }
+
+        function closeModal() {
+            document.getElementById('success-modal').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
+        

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="preload" href="{{ url_for('static', filename='images/autogreen.avif') }}" as="image">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CC Batch (Demo)</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        /* Loader style */
+        .loader {
+            border: 8px solid #846363;
+            border-radius: 50%;
+            border-top: 8px solid #048d3d;
+            width: 60px;
+            height: 60px;
+            animation: spin 2s linear infinite;
+            display: none;
+            margin: 20px auto;
+            margin-top: 50px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Centering and button styling */
+        .center {
+            text-align: center;
+        }
+        .button {
+            font-size: 16px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: #ffffff;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            text-decoration: none;
+            text-align: center;
+        }
+        .button:hover {
+            background-color: #45a049;
+        }
+        .form-group {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        input[type="file"] {
+            display: inline-block;
+        }
+        label {
+            display: block;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        /* Warning message style */
+        .warning-message {
+            background-color: #f44336; /* Red */
+            color: white;
+            padding: 20px;
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            border-radius: 5px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            display: none;
+        }
+
+        .warning-message button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            background-color: #fff;
+            color: #f44336;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        /* Success message style */
+        .success-message {
+            background-color: #4CAF50; /* Green */
+            color: white;
+            padding: 20px;
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            border-radius: 5px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            display: none;
+        }
+
+        /* Modal styling */
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 1; 
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto; 
+            background-color: rgba(0, 0, 0, 0.5); 
+            backdrop-filter: blur(5px);  /* Adds a blur effect to the background */
+            transition: all 0.3s ease-in-out;
+        }
+        .modal-content {
+            background-color: #363535;
+            margin: 10% auto;
+            padding: 30px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            animation: slide-down 0.3s ease-out;
+        }
+        @keyframes slide-down {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .modal-content h3 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #78cf5d;
+        }
+        .modal-content p {
+            font-size: 18px;
+            margin-bottom: 30px;
+            color: #ffffff;
+        }
+        .modal-content .statement-count {
+            font-size: 14px;
+            color: #ccc;
+            margin-top: 20px;
+        }
+        .modal-button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .modal-button.yes {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .modal-button.yes:hover {
+            background-color: #45a049;
+        }
+        .modal-button.no {
+            background-color: #f44336;
+            color: white;
+        }
+        .modal-button.no:hover {
+            background-color: #d73833;
+        }
+    </style>
+    <script>
+        function showLoader() {
+            document.getElementById('loader').style.display = 'block';
+            document.querySelector('input[type="submit"]').disabled = true;
+        }
+
+        function hideLoader() {
+            document.getElementById('loader').style.display = 'none';
+            document.querySelector('input[type="submit"]').disabled = false;
+        }
+
+        function validateForm() {
+            var excelFile = document.getElementById('excel_file').files[0];
+            if (!excelFile) {
+                alert('Please select an Excel file.');
+                return false;
+            }
+            if (!excelFile.name.endsWith('.xlsx')) {
+                alert('Please upload a valid Excel (.xlsx) file.');
+                return false;
+            }
+            return true;
+        }
+
+        function showWarning(message) {
+            var warningElement = document.getElementById('warning-message');
+            warningElement.querySelector('p').innerText = message;
+            warningElement.style.display = 'block';
+
+            setTimeout(hideWarning, 5000);
+        }
+
+        function hideWarning() {
+            document.getElementById('warning-message').style.display = 'none';
+        }
+
+        function showSuccessMessage(message) {
+            var successElement = document.getElementById('success-message');
+            successElement.querySelector('p').innerText = message;
+            successElement.style.display = 'block';
+
+            setTimeout(function() {
+                successElement.style.display = 'none';
+            }, 5000);
+        }
+
+        window.onload = function() {
+            var form = document.querySelector('form');
+            form.onsubmit = function(event) {
+                event.preventDefault();  // Prevent the form from submitting in the traditional way
+                if (validateForm()) {
+                    showLoader();  // Show the loader when form is submitted
+                    const formData = new FormData(form);
+                    fetch('{{ url_for("cc_batch_demo.process_excel") }}', {
+                        method: 'POST',
+                        body: formData,
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        hideLoader();  // Hide loader when the response is received
+                        if (data.status === 'error') {
+                            showWarning(data.message);
+                        } else {
+                            showSuccessMessage(data.message);  // Show success message
+                            window.open('https://www.calculator.net/grade-calculator.html', '_blank');  // Open a new window or tab with the provided URL
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        hideLoader();  // Hide loader if there is an error
+                    });
+                }
+            }
+        }
+    </script>
+</head>
+<body>
+    <header>
+        <h1>CC Batch (Demo)</h1>
+        <nav>
+            <a href="{{ url_for('home') }}">Home</a>
+        </nav>
+    </header>
+    <div class="container center">
+        <h2>Upload Excel to Process</h2>
+        <form action="{{ url_for('cc_batch_demo.process_excel') }}" method="post" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="excel_file">Upload Excel (.xlsx):</label>
+                <input type="file" id="excel_file" name="excel_file" accept=".xlsx" required>
+            </div>
+            <input type="submit" value="Upload" class="button">
+        </form>
+        <div id="loader" class="loader"></div>
+    </div>
+
+    <!-- Warning message for invalid input -->
+    <div id="warning-message" class="warning-message">
+        <p></p>
+        <button onclick="hideWarning()">Dismiss</button>
+    </div>
+
+    <!-- Success message for indicating the data was input -->
+    <div id="success-message" class="success-message">
+        <p>All your data was input into the grade calculator website.</p>
+    </div>
+</body>
+</html>

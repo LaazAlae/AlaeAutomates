@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="preload" href="{{ url_for('static', filename='images/autogreen.avif') }}" as="image">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statement Separator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        /* Loader style */
+        .loader {
+            border: 8px solid #846363;
+            border-radius: 50%;
+            border-top: 8px solid #048d3d;
+            width: 60px;
+            height: 60px;
+            animation: spin 2s linear infinite;
+            display: none;
+            margin: 20px auto;
+            margin-top: 50px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Centering and button styling */
+        .center {
+            text-align: center;
+        }
+        .button {
+            font-size: 16px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: #ffffff;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            text-decoration: none;
+            text-align: center;
+        }
+        .button:hover {
+            background-color: #45a049;
+        }
+        .form-group {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        input[type="file"] {
+            display: inline-block;
+        }
+        label {
+            display: block;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        /* Warning message style */
+        .warning-message {
+            background-color: #f44336; /* Red */
+            color: white;
+            padding: 20px;
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            border-radius: 5px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            display: none;
+        }
+
+        .warning-message button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            background-color: #fff;
+            color: #f44336;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        /* Modal styling */
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 1; 
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto; 
+            background-color: rgba(0, 0, 0, 0.5); 
+            backdrop-filter: blur(5px);  /* Adds a blur effect to the background */
+            transition: all 0.3s ease-in-out;
+        }
+        .modal-content {
+            background-color: #363535;
+            margin: 10% auto;
+            padding: 30px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            animation: slide-down 0.3s ease-out;
+        }
+        @keyframes slide-down {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .modal-content h3 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #78cf5d;
+        }
+        .modal-content p {
+            font-size: 18px;
+            margin-bottom: 30px;
+            color: #ffffff;
+        }
+        .modal-content .statement-count {
+            font-size: 14px;
+            color: #ccc;
+            margin-top: 20px;
+        }
+        .modal-button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .modal-button.yes {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .modal-button.yes:hover {
+            background-color: #45a049;
+        }
+        .modal-button.no {
+            background-color: #f44336;
+            color: white;
+        }
+        .modal-button.no:hover {
+            background-color: #d73833;
+        }
+    </style>
+<script>
+    let totalStatements = 0;
+    let pdfPath = '';
+
+    function showLoader() {
+        console.log("Showing loader");
+        document.getElementById('loader').style.display = 'block';
+        document.querySelector('input[type="submit"]').disabled = true; // Disable the upload button
+    }
+
+    function hideLoader() {
+        console.log("Hiding loader");
+        document.getElementById('loader').style.display = 'none';
+        document.querySelector('input[type="submit"]').disabled = false; // Enable the upload button
+    }
+
+    function validateForm() {
+        console.log("Validating form");
+        var pdfFile = document.getElementById('pdf_file').files[0];
+        var excelFile = document.getElementById('excel_file').files[0];
+        if (!pdfFile || !excelFile) {
+            alert('Please select both PDF and Excel files.');
+            return false;
+        }
+        if (pdfFile.type !== 'application/pdf' || !excelFile.name.endsWith('.xlsx')) {
+            alert('Please upload a valid PDF file and a valid Excel (.xlsx) file.');
+            return false;
+        }
+        return true;
+    }
+
+    function showWarning(message) {
+        var warningElement = document.getElementById('warning-message');
+        warningElement.querySelector('p').innerText = message;
+        warningElement.style.display = 'block';
+
+        // Auto-hide after 5 seconds
+        setTimeout(hideWarning, 5000);
+    }
+
+    function hideWarning() {
+        document.getElementById('warning-message').style.display = 'none';
+    }
+
+    function openModal(statement, index) {
+        console.log("Opening modal for statement", statement);
+
+        // Use the exact property names from your Flask response
+        let firstLine = statement.company_name_in_statement || 'Unknown Company';
+        let similarName = statement.close_match || 'Unknown Company';
+        let pageNum = statement.page_num !== undefined ? statement.page_num : 'Unknown Page';
+
+        document.getElementById('modal-text').innerHTML = `The company name on page ${pageNum}:<br><br> '<strong>${firstLine}</strong>' <br><br> is very similar to <br><br> '<strong>${similarName}</strong>' <br><br> in your do not mail list. <br><br> Do you want to add this statement to DNM?`;
+        document.getElementById('modal').style.display = 'block';
+        document.getElementById('modal-yes').onclick = function() { handleReviewDecision('y', statement); };
+        document.getElementById('modal-no').onclick = function() { handleReviewDecision('n', statement); };
+        document.getElementById('statement-count').innerText = `Statement ${index + 1} of ${totalStatements}`;
+
+        // Re-enable the buttons in case they were disabled previously
+        document.getElementById('modal-yes').disabled = false;
+        document.getElementById('modal-no').disabled = false;
+    }
+
+    function closeModal() {
+        console.log("Closing modal");
+        document.getElementById('modal').style.display = 'none';
+    }
+
+    function handleReviewDecision(decision, statement) {
+        console.log("Handling review decision:", decision, statement);
+
+        // Disable the buttons after one is clicked
+        document.getElementById('modal-yes').disabled = true;
+        document.getElementById('modal-no').disabled = true;
+
+        fetch('{{ url_for("statement_separator.review_statement") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: decision,
+                statement: statement,
+                pdf_path: pdfPath  // Include pdf_path in the request
+            }),
+        })
+        .then(response => {
+            console.log("Response received");
+            return response.json();
+        })
+        .then(data => {
+            console.log("Data received:", data);
+            if (data.status === "continue") {
+                processNextStatement();  // Continue reviewing the next statement
+            } else if (data.status === "finished") {
+                showLoadingModal();  // Show loading animation in the modal
+                // Optionally, you can trigger a redirection after some delay
+                setTimeout(() => {
+                    window.location.href = "{{ url_for('statement_separator.results_page') }}";
+                }, 3000);  // Adjust the delay as needed
+            }
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+    }
+
+    function processNextStatement() {
+        console.log("Processing next statement");
+        if (statementsQueue.length > 0) {
+            const nextStatement = statementsQueue.shift();
+            openModal(nextStatement.statement, nextStatement.index);
+        } else {
+            alert('All statements have been reviewed.');
+            window.location.href = "{{ url_for('home') }}";
+        }
+    }
+
+    function showLoadingModal() {
+        console.log("Showing loading modal");
+        let modalContent = document.querySelector('.modal-content');
+        modalContent.innerHTML = `
+            <div style="text-align: center;">
+                <div class="loader" style="display: block; margin-bottom: 20px;"></div>
+                <p style="color: white;">Loading your results...</p>
+            </div>
+        `;
+    }
+
+    let statementsQueue = [];
+
+    function handleResponse(data) {
+        console.log("Handling response from server:", data);
+        hideLoader(); // Hide loader when the response is received
+        if (data.status === "error") {
+            // Show warning if the PDF has no readable text
+            showWarning(data.message);
+        } else if (data.status === "review") {
+            statementsQueue = data.statements.map((statement, index) => ({ statement, index }));
+            totalStatements = statementsQueue.length; // Store the total number of statements
+            pdfPath = data.pdf_path;  // Store the pdfPath globally
+            processNextStatement();
+        } else if (data.status === "success") {
+            alert("Processing complete!");
+            window.location.href = "{{ url_for('home') }}";
+        }
+    }
+
+    window.onload = function() {
+        console.log("Page loaded");
+        var form = document.querySelector('form');
+        form.onsubmit = function(event) {
+            event.preventDefault();
+            if (validateForm()) {
+                showLoader(); // Show the loader when form is submitted
+                const formData = new FormData(form);
+                console.log("Submitting form data to server");
+                fetch('{{ url_for("statement_separator.process_pdf_endpoint") }}', {
+                    method: 'POST',
+                    body: formData,
+                })
+                .then(response => {
+                    console.log("Form submitted, awaiting response");
+                    return response.json();
+                })
+                .then(data => handleResponse(data))
+                .catch((error) => {
+                    console.error('Error:', error);
+                    hideLoader(); // Hide loader if there is an error
+                });
+            }
+        }
+    }
+</script>   
+</head>
+<body>
+    <header>
+        <h1>Statement Separator</h1>
+        <nav>
+            <a href="{{ url_for('home') }}">Home</a>
+        </nav>
+    </header>
+    <div class="container">
+        <h2>Upload PDF and Excel to Process</h2>
+        <form action="" method="post" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="pdf_file">Upload PDF:</label>
+                <input type="file" id="pdf_file" name="pdf_file" accept=".pdf" required>
+            </div>
+            <div class="form-group">
+                <label for="excel_file">Upload Excel (.xlsx):</label>
+                <input type="file" id="excel_file" name="excel_file" accept=".xlsx" required>
+            </div>
+            <input type="submit" value="Upload" class="button">
+        </form>
+        <div id="loader" class="loader"></div>
+        <div id="download-button" class="center" style="display: none;">
+            <a id="download-link" class="button">Download Separated Invoices</a>
+        </div>
+    </div>
+
+    <!-- Warning message for unreadable PDF -->
+    <div id="warning-message" class="warning-message">
+        <p></p>
+        <button onclick="hideWarning()">Dismiss</button>
+    </div>
+
+    <!-- Modal for reviewing similar statements -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <h3>Review Statement</h3>
+            <p id="modal-text"></p>
+            <button id="modal-yes" class="modal-button yes">Yes</button>
+            <button id="modal-no" class="modal-button no">No</button>
+            <p id="statement-count" class="statement-count"></p>
+        </div>
+    </div>
+</body>
+</html>

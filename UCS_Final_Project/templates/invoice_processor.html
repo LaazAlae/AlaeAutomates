@@ -1,0 +1,174 @@
+<!doctype html>
+<html>
+<head>
+    <title>Upload PDF</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        .loader {
+            border: 8px solid #846363;
+            border-radius: 50%;
+            border-top: 8px solid #048d3d;
+            width: 60px;
+            height: 60px;
+            animation: spin 2s linear infinite;
+            display: none;
+            margin: 20px auto;
+            margin-top: 50px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .center {
+            text-align: center;
+        }
+        .buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .button {
+            font-size: 16px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: #ffffff;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            text-decoration: none;
+            text-align: center;
+        }
+        .button:hover {
+            background-color: #45a049;
+        }
+        .form-group {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        input[type="file"] {
+            display: inline-block;
+        }
+        label {
+            display: block;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        #download-button {
+            margin-top: 40px;
+        }
+        #message {
+            margin-top: 20px;
+            font-size: 18px;
+            color: rgb(213, 255, 213);
+            text-align: center;
+            display: none;
+        }
+        #error-message {
+            margin-top: 20px;
+            font-size: 18px;
+            color: red;
+            text-align: center;
+            display: none;
+        }
+    </style>
+    <script>
+        function showLoader() {
+            document.getElementById('loader').style.display = 'block';
+        }
+
+        function hideLoader() {
+            document.getElementById('loader').style.display = 'none';
+        }
+
+        function validateForm() {
+            var file = document.getElementById('file').files[0];
+            if (!file) {
+                alert('Please select a PDF file.');
+                return false;
+            }
+            if (file.type !== 'application/pdf') {
+                alert('Please upload a valid PDF file.');
+                return false;
+            }
+            showLoader();
+            return true;
+        }
+
+        function handleDownload() {
+            document.getElementById('download-button').style.display = 'none';
+            document.getElementById('message').style.display = 'block';
+
+            // Perform the download first
+            window.location.href = document.getElementById('download-link').href;
+
+            // Clear results after a short delay to ensure the download starts
+            setTimeout(clearResults, 1000);
+
+            setTimeout(function() {
+                document.getElementById('message').style.display = 'none';
+            }, 5000); // Hide message after 5 seconds
+        }
+
+        function clearResults() {
+            fetch('{{ url_for("invoice_processor.clear_results") }}', {
+                method: 'POST'
+            }).then(response => {
+                if (!response.ok) {
+                    console.error('Failed to clear the results folder.');
+                } else {
+                    console.log('Results folder cleared successfully.');
+                }
+            }).catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+        function deleteSeparateResults() {
+            fetch("{{ url_for('invoice_processor.delete_separate_results') }}", {
+                method: 'POST'
+            }).then(response => {
+                if (!response.ok) {
+                    document.getElementById('message').style.display = 'none';
+                    document.getElementById('error-message').style.display = 'block';
+                }
+            }).catch(error => {
+                document.getElementById('message').style.display = 'none';
+                document.getElementById('error-message').style.display = 'block';
+            });
+        }
+
+        window.onload = function() {
+            var form = document.querySelector('form');
+            form.onsubmit = function(event) {
+                return validateForm();  // Simply validate the form
+            }
+        }
+    </script>
+</head>
+<body>
+    <header>
+        <h1>Invoice Processor</h1>
+        <nav>
+            <a href="/">Home</a>
+        </nav>
+    </header>
+    <div class="container">
+        <h2>Upload PDF to Split</h2>
+        <form action="{{ url_for('invoice_processor.upload_file') }}" method="post" enctype="multipart/form-data" onsubmit="return validateForm()">
+            <div class="form-group">
+                <label for="file">Upload PDF:</label>
+                <input type="file" id="file" name="file" accept=".pdf" required>
+            </div>
+            <input type="submit" value="Upload">
+        </form>
+        <div id="loader" class="loader"></div>
+        <div id="download-button" class="center" style="display: {{ 'block' if success else 'none' }};">
+            <a id="download-link" class="button" href="{{ url_for('invoice_processor.download_file', filename=zip_filename) }}" onclick="handleDownload()">Download Separated Invoices</a>
+        </div>
+        <div id="message">Separate invoices downloaded successfully.</div>
+        <div id="error-message">Failed to download invoices. Please try again.</div>
+    </div>
+</body>
+</html>
